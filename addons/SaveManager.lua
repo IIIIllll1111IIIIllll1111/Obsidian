@@ -8,9 +8,8 @@ end)
 local HttpService: HttpService = cloneref(game:GetService("HttpService"))
 local isfolder, isfile, listfiles = isfolder, isfile, listfiles
 
+-- 环境兼容性修复：确保文件检测函数返回布尔值而非报错
 if typeof(clonefunction) == "function" then
-    -- Fix is_____ functions for shitsploits, those functions should never error, only return a boolean.
-
     local
         isfolder_copy,
         isfile_copy,
@@ -116,12 +115,12 @@ local SaveManager = {} do
 
     function SaveManager:IgnoreThemeSettings()
         self:SetIgnoreIndexes({
-            "BackgroundColor", "MainColor", "AccentColor", "OutlineColor", "FontColor", "FontFace", -- themes
-            "ThemeManager_ThemeList", "ThemeManager_CustomThemeList", "ThemeManager_CustomThemeName", -- themes
+            "背景颜色", "主要颜色", "强调色", "描边颜色", "字体颜色", "字体样式",
+            "主题管理器_主题列表", "主题管理器_自定义主题列表", "主题管理器_自定义主题名称",
         })
     end
 
-    --// Folders \\--
+    --// 文件夹管理 \\--
     function SaveManager:CheckSubFolder(createFolder)
         if typeof(self.SubFolder) ~= "string" or self.SubFolder == "" then return false end
 
@@ -193,10 +192,10 @@ local SaveManager = {} do
         self:BuildFolderTree()
     end
 
-    --// Save, Load, Delete, Refresh \\--
+    --// 保存、加载、删除、刷新 \\--
     function SaveManager:Save(name)
         if (not name) then
-            return false, "no config file is selected"
+            return false, "未选择配置文件"
         end
         SaveManager:CheckFolderTree()
 
@@ -227,7 +226,7 @@ local SaveManager = {} do
 
         local success, encoded = pcall(HttpService.JSONEncode, HttpService, data)
         if not success then
-            return false, "failed to encode data"
+            return false, "数据编码失败"
         end
 
         writefile(fullPath, encoded)
@@ -236,7 +235,7 @@ local SaveManager = {} do
 
     function SaveManager:Load(name)
         if (not name) then
-            return false, "no config file is selected"
+            return false, "未选择配置文件"
         end
         SaveManager:CheckFolderTree()
 
@@ -245,17 +244,17 @@ local SaveManager = {} do
             file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
         end
 
-        if not isfile(file) then return false, "invalid file" end
+        if not isfile(file) then return false, "文件无效" end
 
         local success, decoded = pcall(HttpService.JSONDecode, HttpService, readfile(file))
-        if not success then return false, "decode error" end
+        if not success then return false, "解码错误" end
 
         for _, option in pairs(decoded.objects) do
             if not option.type then continue end
             if not self.Parser[option.type] then continue end
             if self.Ignore[option.idx] then continue end
 
-            task.spawn(self.Parser[option.type].Load, option.idx, option) -- task.spawn() so the config loading wont get stuck.
+            task.spawn(self.Parser[option.type].Load, option.idx, option)
         end
 
         return true
@@ -263,7 +262,7 @@ local SaveManager = {} do
 
     function SaveManager:Delete(name)
         if (not name) then
-            return false, "no config file is selected"
+            return false, "未选择配置文件"
         end
 
         local file = self.Folder .. "/settings/" .. name .. ".json"
@@ -271,10 +270,10 @@ local SaveManager = {} do
             file = self.Folder .. "/settings/" .. self.SubFolder .. "/" .. name .. ".json"
         end
 
-        if not isfile(file) then return false, "invalid file" end
+        if not isfile(file) then return false, "文件无效" end
 
         local success = pcall(delfile, file)
-        if not success then return false, "delete file error" end
+        if not success then return false, "删除文件出错" end
 
         return true
     end
@@ -296,8 +295,6 @@ local SaveManager = {} do
             for i = 1, #list do
                 local file = list[i]
                 if file:sub(-5) == ".json" then
-                    -- i hate this but it has to be done ...
-
                     local pos = file:find(".json", 1, true)
                     local start = pos
 
@@ -318,9 +315,9 @@ local SaveManager = {} do
 
         if (not success) then
             if self.Library then
-                self.Library:Notify("Failed to load config list: " .. tostring(data))
+                self.Library:Notify("无法加载配置列表: " .. tostring(data))
             else
-                warn("Failed to load config list: " .. tostring(data))
+                warn("无法加载配置列表: " .. tostring(data))
             end
 
             return {}
@@ -329,7 +326,7 @@ local SaveManager = {} do
         return data
     end
 
-    --// Auto Load \\--
+    --// 自动加载功能 \\--
     function SaveManager:GetAutoloadConfig()
         SaveManager:CheckFolderTree()
 
@@ -341,14 +338,14 @@ local SaveManager = {} do
         if isfile(autoLoadPath) then
             local successRead, name = pcall(readfile, autoLoadPath)
             if not successRead then
-                return "none"
+                return "无"
             end
 
             name = tostring(name)
-            return if name == "" then "none" else name
+            return if name == "" then "无" else name
         end
 
-        return "none"
+        return "无"
     end
 
     function SaveManager:LoadAutoloadConfig()
@@ -362,17 +359,17 @@ local SaveManager = {} do
         if isfile(autoLoadPath) then
             local successRead, name = pcall(readfile, autoLoadPath)
             if not successRead then
-                self.Library:Notify("Failed to load autoload config: write file error")
+                self.Library:Notify("无法加载自动保存配置: 写入文件错误")
                 return
             end
 
             local success, err = self:Load(name)
             if not success then
-                self.Library:Notify("Failed to load autoload config: " .. err)
+                self.Library:Notify("无法加载自动保存配置: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Auto loaded config %q", name))
+            self.Library:Notify(string.format("已自动加载配置 %q", name))
         end
     end
 
@@ -385,7 +382,7 @@ local SaveManager = {} do
         end
 
         local success = pcall(writefile, autoLoadPath, name)
-        if not success then return false, "write file error" end
+        if not success then return false, "写入文件错误" end
 
         return true, ""
     end
@@ -399,109 +396,109 @@ local SaveManager = {} do
         end
 
         local success = pcall(delfile, autoLoadPath)
-        if not success then return false, "delete file error" end
+        if not success then return false, "删除文件错误" end
 
         return true, ""
     end
 
-    --// GUI \\--
+    --// 图形界面构建 \\--
     function SaveManager:BuildConfigSection(tab)
-        assert(self.Library, "Must set SaveManager.Library")
+        assert(self.Library, "必须设置 SaveManager.Library")
 
-        local section = tab:AddRightGroupbox("Configuration", "folder-cog")
+        local section = tab:AddRightGroupbox("配置管理", "folder-cog")
 
-        section:AddInput("SaveManager_ConfigName",    { Text = "Config name" })
-        section:AddButton("Create config", function()
+        section:AddInput("保存管理器_配置名称",    { Text = "配置名称" })
+        section:AddButton("创建配置", function()
             local name = self.Library.Options.SaveManager_ConfigName.Value
 
             if name:gsub(" ", "") == "" then
-                self.Library:Notify("Invalid config name (empty)", 2)
+                self.Library:Notify("配置名称无效 (不能为空)", 2)
                 return
             end
 
             local success, err = self:Save(name)
             if not success then
-                self.Library:Notify("Failed to create config: " .. err)
+                self.Library:Notify("创建配置失败: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Created config %q", name))
+            self.Library:Notify(string.format("已创建配置 %q", name))
             self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
             self.Library.Options.SaveManager_ConfigList:SetValue(nil)
         end)
 
         section:AddDivider()
 
-        section:AddDropdown("SaveManager_ConfigList", { Text = "Config list", Values = self:RefreshConfigList(), AllowNull = true })
-        section:AddButton("Load config", function()
+        section:AddDropdown("保存管理器_配置列表", { Text = "配置列表", Values = self:RefreshConfigList(), AllowNull = true })
+        section:AddButton("加载配置", function()
             local name = self.Library.Options.SaveManager_ConfigList.Value
 
             local success, err = self:Load(name)
             if not success then
-                self.Library:Notify("Failed to load config: " .. err)
+                self.Library:Notify("加载配置失败: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Loaded config %q", name))
+            self.Library:Notify(string.format("已加载配置 %q", name))
         end)
-        section:AddButton("Overwrite config", function()
+        section:AddButton("覆盖配置", function()
             local name = self.Library.Options.SaveManager_ConfigList.Value
 
             local success, err = self:Save(name)
             if not success then
-                self.Library:Notify("Failed to overwrite config: " .. err)
+                self.Library:Notify("覆盖配置失败: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Overwrote config %q", name))
+            self.Library:Notify(string.format("已覆盖配置 %q", name))
         end)
 
-        section:AddButton("Delete config", function()
+        section:AddButton("删除配置", function()
             local name = self.Library.Options.SaveManager_ConfigList.Value
 
             local success, err = self:Delete(name)
             if not success then
-                self.Library:Notify("Failed to delete config: " .. err)
+                self.Library:Notify("删除配置失败: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Deleted config %q", name))
+            self.Library:Notify(string.format("已删除配置 %q", name))
             self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
             self.Library.Options.SaveManager_ConfigList:SetValue(nil)
         end)
 
-        section:AddButton("Refresh list", function()
+        section:AddButton("刷新列表", function()
             self.Library.Options.SaveManager_ConfigList:SetValues(self:RefreshConfigList())
             self.Library.Options.SaveManager_ConfigList:SetValue(nil)
         end)
 
-        section:AddButton("Set as autoload", function()
+        section:AddButton("设为自动加载", function()
             local name = self.Library.Options.SaveManager_ConfigList.Value
 
             local success, err = self:SaveAutoloadConfig(name)
             if not success then
-                self.Library:Notify("Failed to set autoload config: " .. err)
+                self.Library:Notify("设置自动加载失败: " .. err)
                 return
             end
 
-            self.Library:Notify(string.format("Set %q to auto load", name))
-            self.AutoloadConfigLabel:SetText("Current autoload config: " .. name)
+            self.Library:Notify(string.format("已将 %q 设为自动加载", name))
+            self.AutoloadConfigLabel:SetText("当前自动加载配置: " .. name)
         end)
-        section:AddButton("Reset autoload", function()
+        section:AddButton("重置自动加载", function()
             local success, err = self:DeleteAutoLoadConfig()
             if not success then
-                self.Library:Notify("Failed to set autoload config: " .. err)
+                self.Library:Notify("重置自动加载失败: " .. err)
                 return
             end
 
-            self.Library:Notify("Set autoload to none")
-            self.AutoloadConfigLabel:SetText("Current autoload config: none")
+            self.Library:Notify("已取消自动加载")
+            self.AutoloadConfigLabel:SetText("当前自动加载配置: 无")
         end)
 
-        self.AutoloadConfigLabel = section:AddLabel("Current autoload config: " .. self:GetAutoloadConfig(), true)
+        self.AutoloadConfigLabel = section:AddLabel("当前自动加载配置: " .. self:GetAutoloadConfig(), true)
 
         -- self:LoadAutoloadConfig()
-        self:SetIgnoreIndexes({ "SaveManager_ConfigList", "SaveManager_ConfigName" })
+        self:SetIgnoreIndexes({ "保存管理器_配置列表", "SaveManager_ConfigName" })
     end
 
     SaveManager:BuildFolderTree()
